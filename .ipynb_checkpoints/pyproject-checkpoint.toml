@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nsc_variability"
+version = "0.0.1"
+authors = [
+  { name="Pol Massana", email="pol.massana@montana.edu" },
+]
+description = "Tools for analysing variable stars using data from the NOIRLab Source Catalog."
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.9"
+classifiers = [
+    'Intended Audience :: Science/Research',
+    'Topic :: Scientific/Engineering :: Astronomy',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License"
+]
+keywords=['times series', 'light curves', 'variable stars', 'astronomy']
+dependencies = [
+  "matplotlib",
+  "pandas",
+  "numpy",
+  "astropy",
+  "astro-datalab"
+]
+
