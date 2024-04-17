@@ -102,7 +102,7 @@ def plot_phased_lightcurve(phase, mags, mags_errs=None, filters=None, filename='
         for fltr in np.unique(filters):
             sel = filters==fltr
             ax.scatter(phase[sel], mags[sel], label=fltr, s=3)
-            if mags_errs!= None:
+            if mags_errs is not None:
                 ax.errorbar(phase[sel], mags[sel], yerr=mags_errs[sel], 
                             fmt='none', capsize=0, 
                             elinewidth=1.5, 
@@ -111,11 +111,12 @@ def plot_phased_lightcurve(phase, mags, mags_errs=None, filters=None, filename='
         ax.legend(markerscale=2)
     else:
         ax.scatter(phase, mags, label=fltr, s=3)
-        ax.errorbar(phase, mags, yerr=mags_errs, 
-                    fmt='none', capsize=0, 
-                    elinewidth=1.5, 
-                    ecolor='gray', 
-                    alpha=0.7)
+        if mags_errs is not None:
+            ax.errorbar(phase, mags, yerr=mags_errs, 
+                        fmt='none', capsize=0, 
+                        elinewidth=1.5, 
+                        ecolor='gray', 
+                        alpha=0.7)
 
     
     ax.set_xlabel('Phase')
