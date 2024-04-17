@@ -2,7 +2,7 @@ import numpy as np
 from astropy.timeseries import LombScargle, TimeSeries, LombScargleMultiband
 from astropy.time import Time
 import astropy.units as u
-from .utils import phase_fold
+from .utils import *
 
 # Data Lab
 from dl import authClient as ac, queryClient as qc
@@ -56,21 +56,27 @@ class Variable:
         ----------
         objid : str, optional
             ID of the star. Keep in mind it does not carry over different data releases.
-        datarelease: str, optional, default: "dr2"
-            Data release from which to get the data from.
+        datarelease: str, optional
+            Data release from which to get the data from. Default is the class default, currently "dr2".
         """
         
         if datarelease==None: datarelease = self.datarelease
         
         if datarelease=='dr2' or datarelease=='dr1' or datarelease=='DR2' or datarelease=='DR1':
             mag_name = 'mag_auto'
+            magerr_name = 'magerr_auto'
         else:
             mag_name = 'mag'
+            magerr_name = 'magerr'
         
-        query = f"SELECT mjd,{mag_name},filter FROM nsc_{datarelease}.meas WHERE objectid='{self.objid}'"
+        query = f"""SELECT m.mjd,m.{mag_name},m.{magerr_name},m.filter,e.exptime 
+                FROM nsc_dr2.meas AS m JOIN nsc_dr2.exposure as e ON m.exposure=e.exposure
+                WHERE m.objectid='{self.objid}'"""
+        # f"SELECT mjd,{mag_name},{magerr_name},filter FROM nsc_{datarelease}.meas WHERE objectid='{self.objid}'"
         table_res = qc.query(query,fmt='table')
+        timeseries_obj = TimeSeries(data=[table_res[mag_name],table_res[magerr_name],table_res['filter'],table_res['exptime']],time=Time(table_res['mjd'], format='mjd'))
         
-        return TimeSeries(data=[table_res[mag_name],table_res['filter']],time=Time(table_res['mjd'], format='mjd'))
+        return timeseries_obj
          
     def issp(self):
         """
@@ -162,9 +168,12 @@ class Variable:
         
         if self.datarelease=='dr1' or self.datarelease=='dr2':
             mags = self.timeseries['mag_auto']
+            mags_errs = self.timeseries['magerr_auto']
         else:
             mags = self.timeseries['mag']
-        frequency, power = LombScargleMultiband(self.timeseries['time'],mags,self.timeseries['filter']).autopower(
+            mags_errs = self.timeseries['magerr']
+        
+        frequency, power = LombScargleMultiband(self.timeseries['time'],mags,self.timeseries['filter'],dy=mags_errs).autopower(
             method=method,
             normalization=normalization,
             minimum_frequency=minimum_frequency,
@@ -173,7 +182,7 @@ class Variable:
         
         return frequency, power
     
-    def ls_periodogram(self, method='flexible', normalization='standard', minimum_frequency=None, maximum_frequency=None):
+    def ls_periodogram(self, band=None, method='flexible', normalization='standard', minimum_frequency=None, maximum_frequency=None):
         """
         Calculates a Lomb-Scargle periodogram for a single
         band, based on the data stored in timeseries.
@@ -186,14 +195,22 @@ class Variable:
             Power for the corresponding frequencies.
         """
         
+        if band==None:
+            band = most_frequent(self.timeseries['filter'])
+        
+        selection = self.timeseries[self.timeseries['filter']==band]
+        
         if maximum_frequency is None or minimum_frequency is None:
             minimum_frequency, maximum_frequency = self.franges()
         
         if self.datarelease=='dr1' or self.datarelease=='dr2':
-            mags = self.timeseries['mag_auto']
+            mags = selection['mag_auto']
+            mags_errs = selection['magerr_auto']
         else:
-            mags = self.timeseries['mag']
-        frequency, power = LombScargle(self.timeseries['time'],mags).autopower(
+            mags = selection['mag']
+            mags_errs = selection['magerr']
+            
+        frequency, power = LombScargle(selection['time'],mags,dy=mags_errs).autopower(
             method=method,
             normalization=normalization,
             minimum_frequency=minimum_frequency,
@@ -272,7 +289,6 @@ class Variable:
             print('The star has no calculated period.')
             return None
             
-        
         return phase
     
     def get_period(self, frequency, power):
